@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleSavings</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.6.0/dist/web3.min.js"></script>
+</head>
+
+<body>
+    <h1>SimpleSavings</h1>
+    <button id="depositButton">Deposit</button>
+    <input type="number" id="depositAmount" placeholder="Amount in Ether">
+    <br><br>
+    <button id="withdrawButton">Withdraw</button>
+    <p id="status"></p>
+    <p>Your current balance is: <span id="balance"></span></p>
+
+    <script>
+        // Replace with your contract address
+        const contractAddress = '0xacE592b0673810E7B0f658F5513FC057e8427e1c';
+
+        // ABI from the SimpleSavings.json file
+        const contractABI = [ 
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "remainingMinutes",
+          "type": "uint256"
+        }
+      ],
+      "name": "WithdrawalNotAvailable",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "balance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "lockUntil",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address payable",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "deposit",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function",
+      "payable": true
+    },
+    {
+      "inputs": [],
+      "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    } ];
+
+        let web3;
+        let contract;
+
+        // Connect to MetaMask and initialize the contract
+        async function init() {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    contract = new web3.eth.Contract(contractABI, contractAddress);
+                    initUI();
+                } catch (error) {
+                    console.error(error);
+                }
+            } else {
+                alert('Please install MetaMask to use this dApp!');
+            }
+        }
+
+        function initUI() {
+    contract.methods.balance().call().then((balance) => {
+        document.getElementById('balance').innerText = web3.utils.fromWei(balance, 'ether');
+    });
+
+    document.getElementById('depositButton').onclick = async () => {
+        const depositAmount = document.getElementById('depositAmount').value;
+        const accounts = await web3.eth.getAccounts();
+        const weiAmount = web3.utils.toWei(depositAmount, 'ether');
+        contract.methods.deposit().send({ from: accounts[0], value: weiAmount })
+            .on('transactionHash', (hash) => {
+                document.getElementById('status').innerText = 'Transaction sent. Waiting for confirmation...';
+            })
+            .on('confirmation', (confirmationNumber, receipt) => {
+                document.getElementById('status').innerText = 'Deposit successful.';
+            })
+            .on('error', (error) => {
+                document.getElementById('status').innerText = 'Error: ' + error.message;
+            });
+    };
+
+    document.getElementById('withdrawButton').onclick = async () => {
+        const accounts = await web3.eth.getAccounts();
+        contract.methods.withdraw().send({ from: accounts[0] })
+            .on('transactionHash', (hash) => {
+                document.getElementById('status').innerText = 'Transaction sent. Waiting for confirmation...';
+            })
+            .on('confirmation', (confirmationNumber, receipt) => {
+                document.getElementById('status').innerText = 'Withdrawal successful.';
+            })
+            .on('error', (error) => {
+                document.getElementById('status').innerText = 'Error: ' + error.message;
+            });
+    };
+}
+
+        init();
+
+        contract.methods.balance().call()
+.then((balance) => {
+  console.log("Balance:", balance);
+})
+.catch((err) => {
+  console.error(err);
+});
+
+
+
+    </script>
+  
+</body>
+</html>
